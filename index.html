@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sonekart v2 – 30 soner</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --navy: #8bc34a;
+      --brand-dark: #4d7c3d;
+      --brand-light: #8bc34a;
+      --border: #262c36;
+      --muted: #94a3b8;
+      --panel: #151a21;
+      --bg: #0b0e13;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: #e5e7eb;
+    }
+
+    #app {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 100%;
+    }
+
+    #sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 18px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      background-color: #0b0e13;
+      background-image:
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 64px 64px, 64px 64px;
+    }
+
+    .logo-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 14px;
+    }
+
+    .logo {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--brand-dark);
+    }
+
+    .logo-accent { color: var(--brand-light); }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 25px;
+      color: var(--navy);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      background: var(--panel);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      text-transform: uppercase;
+      color: var(--brand-light);
+      letter-spacing: 0.03em;
+    }
+
+    .zone-row {
+      display: grid;
+      grid-template-columns: 22px 46px 1fr;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .zone-pill {
+      color: white;
+      font-weight: 700;
+      border-radius: 5px;
+      text-align: center;
+      padding: 4px 0;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.28);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .metric {
+      background: #1c2229;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      color: var(--navy);
+    }
+
+    .metric span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .leaflet-popup-content {
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .popup-title {
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #1c2229;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 700;
+      color: var(--navy);
+      cursor: pointer;
+    }
+
+    button:hover { background: #242b34; }
+
+    .info {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    a { color: var(--brand-light); }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-row input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #1c2229;
+      color: #e5e7eb;
+    }
+
+    .search-row button {
+      width: auto;
+      padding: 10px 14px;
+    }
+
+    .search-msg {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    .search-msg.error { color: #f87171; }
+    .search-msg.ok { color: #4ade80; }
+
+    .calc-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .calc-body label {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .calc-body select,
+    .calc-body input {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #1c2229;
+      color: #e5e7eb;
+    }
+
+    input[type="checkbox"] { accent-color: var(--brand-light); }
+
+    .calc-result {
+      margin-top: 4px;
+      font-size: 14px;
+      min-height: 18px;
+      line-height: 1.5;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .field-row label {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .field-row select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #1c2229;
+      color: #e5e7eb;
+    }
+
+    .kjoredag-actions {
+      margin-top: 10px;
+    }
+
+    .kjoredag-actions button {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .kd-list {
+      margin: 6px 0 0;
+      padding: 0;
+      list-style: none;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .kd-list li { margin: 2px 0; }
+
+    .kd-day {
+      display: inline-block;
+      min-width: 74px;
+      font-weight: 700;
+      color: #e5e7eb;
+    }
+
+    .kd-slots { color: var(--muted); }
+
+    .kd-empty { color: #f87171; }
+
+    @media (max-width: 900px) {
+      #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      #sidebar { max-height: 42vh; border-right: 0; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <h1>Sonekart v2 – 30 soner</h1>
+      <p class="subtitle">Interaktivt kart basert på <strong>Forslag sonekart.xlsx</strong></p>
+
+      <div class="panel logo-panel">
+        <div class="logo">Colli<span class="logo-accent">XL</span></div>
+      </div>
+
+      <div class="panel">
+        <h2>Oppsummering</h2>
+        <div class="summary">
+          <div class="metric"><strong id="zoneCount">–</strong><span>soner</span></div>
+          <div class="metric"><strong id="postcodeCount">–</strong><span>postnummer</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Søk postnummer</h2>
+        <div class="search-row">
+          <input id="searchInput" type="text" inputmode="numeric" maxlength="4" placeholder="f.eks. 0150" />
+          <button id="searchBtn">Søk</button>
+        </div>
+        <div id="searchMsg" class="search-msg"></div>
+        <div id="searchKjoredag" class="kd-list-wrap"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Søk kjøredag</h2>
+        <div class="field-row">
+          <label>Ukedag
+            <select id="kdDay">
+              <option value="">Alle</option>
+              <option value="1">Mandag</option>
+              <option value="2">Tirsdag</option>
+              <option value="3">Onsdag</option>
+              <option value="4">Torsdag</option>
+              <option value="5">Fredag</option>
+              <option value="6">Lørdag</option>
+            </select>
+          </label>
+          <label>Tidsrom
+            <select id="kdSlot">
+              <option value="">Alle</option>
+              <option value="e">Formiddag</option>
+              <option value="d">Dagtid</option>
+              <option value="l">Ettermiddag</option>
+            </select>
+          </label>
+        </div>
+        <div class="kjoredag-actions">
+          <button id="kdReset">Nullstill filter</button>
+        </div>
+        <div id="kdMsg" class="search-msg"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Priskalkulator</h2>
+        <div class="calc-body">
+            <label>Avsender/kunde
+              <select id="calcCustomer">
+                <option value="amo">A-Møbler</option>
+              </select>
+            </label>
+            <label>Fra postnummer
+              <input id="calcFra" type="text" inputmode="numeric" maxlength="4" placeholder="f.eks. 0150" />
+            </label>
+            <label>Til postnummer
+              <input id="calcTil" type="text" inputmode="numeric" maxlength="4" placeholder="f.eks. 3475" />
+            </label>
+            <label>Tjeneste
+              <select id="calcTjeneste"></select>
+            </label>
+            <label>Kubikk
+              <select id="calcKubikk"></select>
+            </label>
+            <button id="calcBtn">Beregn pris</button>
+            <div id="calcResult" class="calc-result"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="selectedPanel" style="display:none;">
+        <h2>
+          Valgt område
+          <a href="#" id="closeSelected" style="float:right; text-transform:none; letter-spacing:0;">Lukk ✕</a>
+        </h2>
+        <div id="selectedInfo"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Soner</h2>
+        <div id="zoneList"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Visning</h2>
+        <button id="fitBtn">Zoom til alle soner</button>
+        <button id="basemapBtn" style="margin-top:8px;">Vis bakgrunnskart</button>
+      </div>
+
+      <div class="panel info">
+        <strong>Data:</strong><br>
+        GeoJSON: postnummer_sonekart_forslag.geojson<br>
+        CSV: map_export_forslag_sonekart.csv<br>
+        Priser: priser_amo.json<br>
+        Kjøredager: kjoredager.json<br><br>
+        Priser: Prismatrise_18.08.26_30_soner_v4.xlsx<br><br>
+        <strong>Nytt i v2:</strong> 30 soner (var 24). Sone 9 er splittet i
+        9 Nedre Glomma, 25 E6-nord/Mosseaksen, 26 Indre Østfold og 27 Halden.
+        Sone 28 Larvik, 29 Skien og 30 Porsgrunn/Bamble er ny dekning.<br><br>
+        Kjøredag er hentet fra ColliXL 06.08.2026 med opphenting i Oslo
+        (Alnabru). Sone 25–27 arver kjøredag 4 fra sone 9. Sone 28–30 har
+        ikke fastsatt kjøredag ennå.<br><br>
+        1133 postnummer, 1128 med flate i kartet.<br><br>
+        Klikk på et postnummerområde for detaljer.
+      </div>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <script>
+    const map = L.map('map', {
+      zoomControl: true,
+      preferCanvas: true,
+      zoomAnimation: false,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
+      inertia: false
+    }).setView([59.91, 10.75], 8);
+
+    // No raster basemap by default. This removes tile flicker completely.
+    // Use the button in the sidebar if you want to toggle OpenStreetMap on/off.
+    let osmLayer = null;
+
+    function toggleBasemap() {
+      if (osmLayer) {
+        map.removeLayer(osmLayer);
+        osmLayer = null;
+        document.getElementById('basemapBtn').textContent = 'Vis bakgrunnskart';
+      } else {
+        osmLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap-bidragsytere, kart av <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 20,
+          minZoom: 5,
+          noWrap: true,
+          keepBuffer: 8,
+          detectRetina: true,
+          updateWhenIdle: true,
+          updateWhenZooming: false,
+          crossOrigin: true
+        }).addTo(map);
+        osmLayer.bringToBack();
+        document.getElementById('basemapBtn').textContent = 'Skjul bakgrunnskart';
+      }
+    }
+
+    const defaultStyle = {
+      color: '#ffffff',
+      weight: 1,
+      opacity: 0.85,
+      fillOpacity: 0.68,
+      fillColor: '#cbd5e1'
+    };
+
+    const hoverStyle = {
+      weight: 3,
+      color: '#f8fafc',
+      fillOpacity: 0.82
+    };
+
+    const selectedStyle = {
+      weight: 4,
+      color: '#8bc34a',
+      opacity: 1,
+      fillOpacity: 0.95
+    };
+
+    let geoLayer;
+    let zoneData = {};
+    let visibleZones = new Set();
+    let postcodeLayers = {};
+    let selectedPc = null;
+    let priceData = null;
+    let kjoredagData = null;
+    let kdFilter = { day: '', slot: '' };
+
+    // ---- Kjøredag -------------------------------------------------------
+    // Kjøredag er hentet fra ColliXL og er konstant innenfor hver sone,
+    // verifisert mot alle 1032 postnummer. Oppslaget skjer derfor på sone.
+    function kjoredagForZone(zone) {
+      if (!kjoredagData) return null;
+      return kjoredagData.soner[String(zone)] || null;
+    }
+
+    function slotLabel(code) {
+      const t = kjoredagData && kjoredagData.tidsrom[code];
+      return t ? `${t.navn} ${t.fra}–${t.til}` : code;
+    }
+
+    function dayLabel(day) {
+      return (kjoredagData && kjoredagData.ukedager[String(day)]) || `Dag ${day}`;
+    }
+
+    function kjoredagHtml(zone) {
+      const entries = kjoredagForZone(zone);
+      if (!entries || !entries.length) {
+        const nye = (kjoredagData && kjoredagData.soner_uten_kjoredag) || [];
+        if (nye.includes(Number(zone))) {
+          return '<div class="kd-empty">Ny sone – kjøredag er ikke fastsatt ennå.</div>';
+        }
+        return '<div class="kd-empty">Ingen kjøredager registrert.</div>';
+      }
+      const items = entries.map(e =>
+        `<li><span class="kd-day">${dayLabel(e.dag)}</span>` +
+        `<span class="kd-slots">${e.tid.map(slotLabel).join(' · ')}</span></li>`
+      ).join('');
+      return `<ul class="kd-list">${items}</ul>`;
+    }
+
+    function matchesKdFilter(zone) {
+      if (!kdFilter.day && !kdFilter.slot) return true;
+      const entries = kjoredagForZone(zone);
+      if (!entries) return false;
+      return entries.some(e => {
+        if (kdFilter.day && String(e.dag) !== kdFilter.day) return false;
+        if (kdFilter.slot && !e.tid.includes(kdFilter.slot)) return false;
+        return true;
+      });
+    }
+
+    function applyKdFilter() {
+      kdFilter.day = document.getElementById('kdDay').value;
+      kdFilter.slot = document.getElementById('kdSlot').value;
+
+      const msgEl = document.getElementById('kdMsg');
+      if (geoLayer) geoLayer.setStyle(styleFeature);
+      if (selectedPc) applyHighlight(selectedPc);
+
+      if (!kdFilter.day && !kdFilter.slot) {
+        msgEl.textContent = '';
+        msgEl.className = 'search-msg';
+        return;
+      }
+
+      const zones = new Set();
+      let postcodes = 0;
+      Object.values(zoneData).forEach(row => {
+        if (row.zone && matchesKdFilter(row.zone)) {
+          zones.add(String(row.zone));
+          postcodes += 1;
+        }
+      });
+
+      const parts = [];
+      if (kdFilter.day) parts.push(dayLabel(kdFilter.day).toLowerCase());
+      if (kdFilter.slot) parts.push(slotLabel(kdFilter.slot).toLowerCase());
+      const what = parts.join(', ');
+
+      if (!postcodes) {
+        msgEl.textContent = `Ingen soner kjøres ${what}.`;
+        msgEl.className = 'search-msg error';
+        return;
+      }
+
+      const zoneNums = [...zones].map(Number).sort((a, b) => a - b);
+      msgEl.innerHTML = `Kjøres ${what}: <strong>${zoneNums.length} soner</strong>, ` +
+        `<strong>${postcodes} postnummer</strong><br>` +
+        `<span style="color:#94a3b8">Sone ${zoneNums.join(', ')}</span>`;
+      msgEl.className = 'search-msg ok';
+    }
+
+    function clearHighlight(pc) {
+      (postcodeLayers[pc] || []).forEach(l => geoLayer.resetStyle(l));
+    }
+
+    function applyHighlight(pc) {
+      (postcodeLayers[pc] || []).forEach(l => {
+        l.setStyle(selectedStyle);
+        l.bringToFront();
+      });
+    }
+
+    function selectZone(pc, feature) {
+      if (selectedPc && selectedPc !== pc) clearHighlight(selectedPc);
+      selectedPc = pc;
+      applyHighlight(pc);
+      showSelectedPanel(feature);
+    }
+
+    function showSelectedPanel(feature) {
+      document.getElementById('selectedInfo').innerHTML = zoneInfoHtml(feature);
+      document.getElementById('selectedPanel').style.display = 'block';
+    }
+
+    function clearSelection() {
+      if (selectedPc) clearHighlight(selectedPc);
+      selectedPc = null;
+      document.getElementById('selectedPanel').style.display = 'none';
+    }
+
+    function normalizePostcode(value) {
+      return String(value || '').padStart(4, '0');
+    }
+
+    function styleFeature(feature) {
+      const pc = normalizePostcode(feature.properties.postnummer);
+      const row = zoneData[pc];
+      if (!row || !visibleZones.has(String(row.zone)) || !matchesKdFilter(row.zone)) {
+        return {
+          ...defaultStyle,
+          fillOpacity: 0.06,
+          fillColor: '#334155',
+          color: '#1f2937',
+          weight: 0.6
+        };
+      }
+      return {
+        ...defaultStyle,
+        fillColor: row.color || '#94a3b8'
+      };
+    }
+
+    function zoneInfoHtml(feature) {
+      const pc = normalizePostcode(feature.properties.postnummer);
+      const row = zoneData[pc] || {};
+      return `
+        <div class="popup-title">${pc} ${feature.properties.poststed || ''}</div>
+        <div><strong>Sone:</strong> ${row.zone || 'Ikke satt'}</div>
+        <div><strong>Sonenavn:</strong> ${row.zone_name || ''}</div>
+        <div><strong>Kommune:</strong> ${feature.properties.kommune || ''}</div>
+        <div style="margin-top:8px"><strong>Kjøredag:</strong></div>
+        ${kjoredagHtml(row.zone)}
+      `;
+    }
+
+    function onEachFeature(feature, layer) {
+      const pc = normalizePostcode(feature.properties.postnummer);
+
+      (postcodeLayers[pc] = postcodeLayers[pc] || []).push(layer);
+
+      layer.on({
+        mouseover: (e) => {
+          e.target.setStyle(hoverStyle);
+          e.target.bringToFront();
+        },
+        mouseout: (e) => {
+          geoLayer.resetStyle(e.target);
+          if (selectedPc === pc) e.target.setStyle(selectedStyle);
+        },
+        click: () => selectZone(pc, feature)
+      });
+    }
+
+    function searchPostcode(rawValue) {
+      const msgEl = document.getElementById('searchMsg');
+      const kdEl = document.getElementById('searchKjoredag');
+      const pc = normalizePostcode(rawValue);
+
+      if (!rawValue || !rawValue.trim()) {
+        msgEl.textContent = '';
+        msgEl.className = 'search-msg';
+        kdEl.innerHTML = '';
+        return;
+      }
+
+      const layers = postcodeLayers[pc];
+      if (!layers || !layers.length) {
+        msgEl.textContent = `Fant ikke postnummer ${pc}.`;
+        msgEl.className = 'search-msg error';
+        kdEl.innerHTML = '';
+        return;
+      }
+
+      const group = L.featureGroup(layers);
+      map.fitBounds(group.getBounds(), { padding: [40, 40], maxZoom: 13 });
+      selectZone(pc, layers[0].feature);
+
+      const row = zoneData[pc] || {};
+      msgEl.textContent = row.zone
+        ? `${pc}: sone ${row.zone}${row.zone_name ? ' – ' + row.zone_name : ''}`
+        : `${pc} funnet (ingen sone satt).`;
+      msgEl.className = 'search-msg ok';
+
+      kdEl.innerHTML = row.zone
+        ? `<div style="margin-top:8px;font-size:13px;color:var(--brand-light);font-weight:700">Kjøredag</div>${kjoredagHtml(row.zone)}`
+        : '';
+    }
+
+    function populatePriceCalcOptions() {
+      const tjenesteSelect = document.getElementById('calcTjeneste');
+      Object.keys(priceData.services).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        tjenesteSelect.appendChild(opt);
+      });
+
+      const firstService = priceData.services[Object.keys(priceData.services)[0]];
+      const kubikkSelect = document.getElementById('calcKubikk');
+      firstService.forEach((tierEntry, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = tierEntry.tier;
+        kubikkSelect.appendChild(opt);
+      });
+    }
+
+    function calculatePrice() {
+      const resultEl = document.getElementById('calcResult');
+      const fra = normalizePostcode(document.getElementById('calcFra').value);
+      const til = normalizePostcode(document.getElementById('calcTil').value);
+      const tjeneste = document.getElementById('calcTjeneste').value;
+      const tierIdx = Number(document.getElementById('calcKubikk').value);
+
+      const fraRow = zoneData[fra];
+      const tilRow = zoneData[til];
+
+      if (!fraRow || !tilRow) {
+        const missing = !fraRow ? `FRA-postnummer ${fra}` : `TIL-postnummer ${til}`;
+        resultEl.textContent = `Fant ikke sone for ${missing}.`;
+        resultEl.className = 'calc-result search-msg error';
+        return;
+      }
+
+      const fraZone = Number(fraRow.zone);
+      const tilZone = Number(tilRow.zone);
+      const service = priceData.services[tjeneste];
+      const tier = service && service[tierIdx];
+
+      if (!fraZone || !tilZone || !tier) {
+        resultEl.textContent = 'Fant ikke pris for denne kombinasjonen.';
+        resultEl.className = 'calc-result search-msg error';
+        return;
+      }
+
+      const price = tier.matrix[fraZone - 1][tilZone - 1];
+      resultEl.innerHTML = `<strong>${price.toLocaleString('no-NO')} kr</strong><br>` +
+        `${fra} (sone ${fraZone}) → ${til} (sone ${tilZone}) · ${tjeneste} · ${tier.tier}` +
+        `<div style="margin-top:8px;color:#94a3b8">Kjøredag til ${til}:</div>` +
+        kjoredagHtml(tilZone);
+      resultEl.className = 'calc-result search-msg ok';
+    }
+
+    function renderZoneList(rows) {
+      const zoneList = document.getElementById('zoneList');
+      const zones = {};
+
+      rows.forEach(row => {
+        const z = String(row.zone);
+        if (!zones[z]) {
+          zones[z] = {
+            zone: z,
+            name: row.zone_name || `Sone ${z}`,
+            color: row.color || '#94a3b8',
+            count: 0
+          };
+        }
+        zones[z].count += 1;
+      });
+
+      Object.keys(zones).sort((a,b) => Number(a) - Number(b)).forEach(z => {
+        visibleZones.add(z);
+        const item = zones[z];
+
+        const div = document.createElement('label');
+        div.className = 'zone-row';
+        div.innerHTML = `
+          <input type="checkbox" checked data-zone="${z}">
+          <span class="zone-pill" style="background:${item.color}">${z}</span>
+          <span>${item.name} <small style="color:#64748b">(${item.count})</small></span>
+        `;
+        zoneList.appendChild(div);
+      });
+
+      zoneList.addEventListener('change', (event) => {
+        const zone = event.target.dataset.zone;
+        if (!zone) return;
+        if (event.target.checked) visibleZones.add(zone);
+        else visibleZones.delete(zone);
+        if (geoLayer) geoLayer.setStyle(styleFeature);
+      });
+
+      document.getElementById('zoneCount').textContent = Object.keys(zones).length;
+      document.getElementById('postcodeCount').textContent = rows.length;
+    }
+
+    async function init() {
+      const [csvRes, geoRes, priceRes, kdRes] = await Promise.all([
+        fetch('map_export_forslag_sonekart.csv'),
+        fetch('postnummer_sonekart_forslag.geojson'),
+        fetch('priser_amo.json'),
+        fetch('kjoredager.json')
+      ]);
+
+      priceData = await priceRes.json();
+      kjoredagData = await kdRes.json();
+      populatePriceCalcOptions();
+
+      const csvText = await csvRes.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      const rows = parsed.data.map(row => ({
+        postcode: normalizePostcode(row.postcode),
+        zone: String(row.zone || ''),
+        zone_name: row.zone_name || '',
+        color: row.color || '#94a3b8',
+        delivery_days: row.delivery_days || '',
+        depot: row.depot || ''
+      }));
+
+      rows.forEach(row => zoneData[row.postcode] = row);
+      renderZoneList(rows);
+
+      const geoJson = await geoRes.json();
+
+      geoLayer = L.geoJSON(geoJson, {
+        style: styleFeature,
+        onEachFeature
+      }).addTo(map);
+
+      map.fitBounds(geoLayer.getBounds(), { padding: [30, 30] });
+
+      document.getElementById('fitBtn').addEventListener('click', () => {
+        map.fitBounds(geoLayer.getBounds(), { padding: [30, 30] });
+      });
+
+      document.getElementById('basemapBtn').addEventListener('click', toggleBasemap);
+
+      document.getElementById('searchBtn').addEventListener('click', () => {
+        searchPostcode(document.getElementById('searchInput').value);
+      });
+
+      document.getElementById('searchInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchPostcode(e.target.value);
+      });
+
+      document.getElementById('closeSelected').addEventListener('click', (e) => {
+        e.preventDefault();
+        clearSelection();
+      });
+
+      document.getElementById('kdDay').addEventListener('change', applyKdFilter);
+      document.getElementById('kdSlot').addEventListener('change', applyKdFilter);
+
+      document.getElementById('kdReset').addEventListener('click', () => {
+        document.getElementById('kdDay').value = '';
+        document.getElementById('kdSlot').value = '';
+        applyKdFilter();
+      });
+
+      document.getElementById('calcBtn').addEventListener('click', calculatePrice);
+
+      ['calcFra', 'calcTil'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') calculatePrice();
+        });
+      });
+    }
+
+    init().catch(error => {
+      console.error(error);
+      alert('Kartet kunne ikke lastes. Sjekk at CSV- og GeoJSON-filene ligger i samme mappe som index.html.');
+    });
+  </script>
+</body>
+</html>

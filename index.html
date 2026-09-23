@@ -233,6 +233,17 @@
 
     input[type="checkbox"] { accent-color: var(--brand-light); }
 
+    .ledd-merke {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px;
+      border-radius: 9px;
+      font-size: 11px;
+      letter-spacing: .02em;
+      background: rgba(148,163,184,.18);
+      color: #cbd5e1;
+      vertical-align: 2px;
+    }
     .calc-result {
       margin-top: 4px;
       font-size: 14px;
@@ -411,10 +422,14 @@
         CSV: map_export_forslag_sonekart.csv<br>
         Priser: priser_amo.json<br>
         Kjøredager: kjoredager.json<br><br>
-        Priser: Prismatrise_18.08.26_30_soner_v4.xlsx<br><br>
+        Priser: Prismatrise_18.08.26_30_soner_v5.xlsx (korridorstige)<br><br>
         <strong>Nytt i v2:</strong> 30 soner (var 24). Sone 9 er splittet i
         9 Nedre Glomma, 25 E6-nord/Mosseaksen, 26 Indre Østfold og 27 Halden.
         Sone 28 Larvik, 29 Skien og 30 Porsgrunn/Bamble er ny dekning.<br><br>
+        <strong>Korridorstige (v5):</strong> fra sone 1, 3, 4, 7 og 10 stiger prisen
+        ett prisledd per sone ruta bygger ut — sone 4 Drammen (ledd 1), 24 Vestfold
+        Nord (2), 6 Vestfold sør (3), 28 Larvik (3), 30 Porsgrunn/Bamble (4),
+        29 Skien/Siljan (5). Alle ni tjenester ligger i priskalkulatoren.<br><br>
         Kjøredag er hentet fra ColliXL 06.08.2026 med opphenting i Oslo
         (Alnabru). Sone 25–27 arver kjøredag 4 fra sone 9. Sone 28–30 har
         ikke fastsatt kjøredag ennå.<br><br>
@@ -743,11 +758,22 @@
       }
 
       const price = tier.matrix[fraZone - 1][tilZone - 1];
-      resultEl.innerHTML = `<strong>${price.toLocaleString('no-NO')} kr</strong><br>` +
+      const ledd = prisledd(tier, price);
+      resultEl.innerHTML = `<strong>${price.toLocaleString('no-NO')} kr</strong>` +
+        `<span class="ledd-merke">Prisledd ${ledd.nr} av ${ledd.av}</span><br>` +
         `${fra} (sone ${fraZone}) → ${til} (sone ${tilZone}) · ${tjeneste} · ${tier.tier}` +
+        `<div style="margin-top:6px;color:#94a3b8">Alle ledd: ${ledd.alle.map((v, i) =>
+           (i + 1 === ledd.nr ? `<strong style="color:#e2e8f0">${v.toLocaleString('no-NO')}</strong>`
+                              : v.toLocaleString('no-NO'))).join(' · ')}</div>` +
         `<div style="margin-top:8px;color:#94a3b8">Kjøredag til ${til}:</div>` +
         kjoredagHtml(tilZone);
       resultEl.className = 'calc-result search-msg ok';
+    }
+
+    // Hvilket av de fem prisleddene en pris ligger pa - gjor stigen lett a kontrollere.
+    function prisledd(tier, price) {
+      const alle = [...new Set(tier.matrix.flat())].sort((a, b) => a - b);
+      return { nr: alle.indexOf(price) + 1, av: alle.length, alle };
     }
 
     function renderZoneList(rows) {

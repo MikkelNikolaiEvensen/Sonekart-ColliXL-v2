@@ -512,14 +512,14 @@
         osmLayer = null;
         document.getElementById('basemapBtn').textContent = 'Vis bakgrunnskart';
       } else {
-        osmLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap-bidragsytere, kart av <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
+        // Esri Dark Gray Canvas: morkt, krever ingen API-nokkel. Merk {z}/{y}/{x}-rekkefolgen.
+        osmLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Bakgrunnskart: Esri, HERE, Garmin, &copy; OpenStreetMap-bidragsytere',
           maxZoom: 20,
+          maxNativeZoom: 16,
           minZoom: 5,
           noWrap: true,
           keepBuffer: 8,
-          detectRetina: true,
           updateWhenIdle: true,
           updateWhenZooming: false,
           crossOrigin: true

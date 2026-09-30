@@ -233,6 +233,54 @@
 
     input[type="checkbox"] { accent-color: var(--brand-light); }
 
+    .pris-blokk {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(148,163,184,.22);
+    }
+    .pris-topp {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .pris-topp select {
+      flex: 0 1 auto;
+      width: auto;
+      margin: 0;
+      padding: 3px 6px;
+      font-size: 12px;
+    }
+    .pris-tabell {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .pris-tabell th {
+      text-align: left;
+      font-weight: 600;
+      color: #94a3b8;
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(148,163,184,.22);
+    }
+    .pris-tabell th:not(:first-child) { text-align: right; }
+    .pris-tabell td {
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(148,163,184,.08);
+    }
+    .pris-tall {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .pris-ledd {
+      text-align: right;
+      width: 2.4em;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
     .ledd-merke {
       display: inline-block;
       margin-left: 8px;
@@ -434,7 +482,7 @@
         (Alnabru). Sone 25–27 arver torsdag fra sone 9. Sone 28–30 ligger
         nedenfor Tønsberg og kjøres onsdag, samme dag som sone 6.<br><br>
         1133 postnummer, 1128 med flate i kartet.<br><br>
-        Klikk på et postnummerområde for detaljer.
+        Klikk på et postnummerområde for å se sone, kjøredag og pris fra sone 10 for alle tjenester.
       </div>
     </aside>
 
@@ -504,6 +552,9 @@
     let visibleZones = new Set();
     let postcodeLayers = {};
     let selectedPc = null;
+    let valgtFeature = null;
+    let valgtVolum = 0;
+    const HENTESONE = 10;
     let priceData = null;
     let kjoredagData = null;
     let kdFilter = { day: '', slot: '' };
@@ -603,6 +654,7 @@
     function selectZone(pc, feature) {
       if (selectedPc && selectedPc !== pc) clearHighlight(selectedPc);
       selectedPc = pc;
+      valgtFeature = feature;
       applyHighlight(pc);
       showSelectedPanel(feature);
     }
@@ -610,6 +662,13 @@
     function showSelectedPanel(feature) {
       document.getElementById('selectedInfo').innerHTML = zoneInfoHtml(feature);
       document.getElementById('selectedPanel').style.display = 'block';
+      const sel = document.getElementById('volumValg');
+      if (sel) {
+        sel.addEventListener('change', () => {
+          valgtVolum = Number(sel.value);
+          if (valgtFeature) showSelectedPanel(valgtFeature);
+        });
+      }
     }
 
     function clearSelection() {
@@ -650,7 +709,40 @@
         <div><strong>Kommune:</strong> ${feature.properties.kommune || ''}</div>
         <div style="margin-top:8px"><strong>Kjøredag:</strong></div>
         ${kjoredagHtml(row.zone)}
+        ${prisFraHentesoneHtml(Number(row.zone))}
       `;
+    }
+
+    // Pris fra hentesonen (Alnabru) til det valgte postnummeret, alle tjenester.
+    function prisFraHentesoneHtml(tilSone) {
+      if (!priceData || !tilSone) return '';
+      const navn = Object.keys(priceData.services);
+      const volumer = priceData.services[navn[0]].map(t => t.tier);
+      if (valgtVolum >= volumer.length) valgtVolum = 0;
+
+      const opts = volumer.map((v, i) =>
+        `<option value="${i}"${i === valgtVolum ? ' selected' : ''}>${v}</option>`).join('');
+
+      const rader = navn.map(n => {
+        const tier = priceData.services[n][valgtVolum];
+        const pris = tier.matrix[HENTESONE - 1][tilSone - 1];
+        const l = prisledd(tier, pris);
+        return `<tr><td>${n}</td>` +
+               `<td class="pris-tall">${pris.toLocaleString('no-NO')}</td>` +
+               `<td class="pris-ledd" title="Prisledd ${l.nr} av ${l.av}">${l.nr}</td></tr>`;
+      }).join('');
+
+      return `
+        <div class="pris-blokk">
+          <div class="pris-topp">
+            <strong>Pris fra sone ${HENTESONE}</strong>
+            <select id="volumValg" aria-label="Volumtrinn">${opts}</select>
+          </div>
+          <table class="pris-tabell">
+            <thead><tr><th>Tjeneste</th><th>Kr</th><th>Ledd</th></tr></thead>
+            <tbody>${rader}</tbody>
+          </table>
+        </div>`;
     }
 
     function onEachFeature(feature, layer) {

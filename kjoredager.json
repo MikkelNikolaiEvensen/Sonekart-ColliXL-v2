@@ -2,7 +2,7 @@
  "kilde": "app.collixl.no – /api/internal_ui_data/delivery-intervals-internal",
  "hentet": "2026-08-06",
  "opphenting": "A-Møbler, Oslo (Alnabru, 0664–0668)",
- "merknad": "Kjøredag er verifisert konstant innenfor hver sone for alle 1032 postnummer (0 avvik). Sone 25, 26 og 27 er splittet ut av sone 9 og arver kjøredag 4. Sone 28, 29 og 30 (Larvik/Grenland) er nye - kjøredag er ikke fastsatt.",
+ "merknad": "Kjøredag er verifisert konstant innenfor hver sone for alle postnummer. Sone 25, 26 og 27 er splittet ut av sone 9 og arver kjøredag torsdag. Sone 28, 29 og 30 ligger nedenfor Tønsberg og følger sone 6 - onsdag.",
  "tidsrom": {
   "e": {
    "navn": "Formiddag",
@@ -657,11 +657,33 @@
      "d"
     ]
    }
+  ],
+  "28": [
+   {
+    "dag": 3,
+    "tid": [
+     "e",
+     "d"
+    ]
+   }
+  ],
+  "29": [
+   {
+    "dag": 3,
+    "tid": [
+     "e",
+     "d"
+    ]
+   }
+  ],
+  "30": [
+   {
+    "dag": 3,
+    "tid": [
+     "e",
+     "d"
+    ]
+   }
   ]
- },
- "soner_uten_kjoredag": [
-  28,
-  29,
-  30
- ]
+ }
 }

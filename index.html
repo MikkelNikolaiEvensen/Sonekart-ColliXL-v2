@@ -431,8 +431,8 @@
         Nord (2), 6 Vestfold sør (3), 28 Larvik (3), 30 Porsgrunn/Bamble (4),
         29 Skien/Siljan (5). Alle ni tjenester ligger i priskalkulatoren.<br><br>
         Kjøredag er hentet fra ColliXL 06.08.2026 med opphenting i Oslo
-        (Alnabru). Sone 25–27 arver kjøredag 4 fra sone 9. Sone 28–30 har
-        ikke fastsatt kjøredag ennå.<br><br>
+        (Alnabru). Sone 25–27 arver torsdag fra sone 9. Sone 28–30 ligger
+        nedenfor Tønsberg og kjøres onsdag, samme dag som sone 6.<br><br>
         1133 postnummer, 1128 med flate i kartet.<br><br>
         Klikk på et postnummerområde for detaljer.
       </div>
@@ -528,10 +528,6 @@
     function kjoredagHtml(zone) {
       const entries = kjoredagForZone(zone);
       if (!entries || !entries.length) {
-        const nye = (kjoredagData && kjoredagData.soner_uten_kjoredag) || [];
-        if (nye.includes(Number(zone))) {
-          return '<div class="kd-empty">Ny sone – kjøredag er ikke fastsatt ennå.</div>';
-        }
         return '<div class="kd-empty">Ingen kjøredager registrert.</div>';
       }
       const items = entries.map(e =>
